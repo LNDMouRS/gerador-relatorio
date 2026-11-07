@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1e40af" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Fundo com cantos arredondados -->
+  <rect width="512" height="512" rx="112" fill="url(#blueGrad)" />
+
+  <!-- Cruz de Emergência Médica (Star of Life estilizada) com sombra -->
+  <g filter="url(#shadow)" fill="#ffffff">
+    <!-- Braço vertical da cruz -->
+    <rect x="224" y="100" width="64" height="312" rx="16" />
+    <!-- Braço horizontal da cruz -->
+    <rect x="100" y="224" width="312" height="64" rx="16" />
+    
+    <!-- Linha de Eletrocardiograma (Sinal Vital) no centro -->
+    <path d="M 140 256 L 210 256 L 235 180 L 260 330 L 285 230 L 305 256 L 372 256" 
+          fill="none" 
+          stroke="#ef4444" 
+          stroke-width="16" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+  </g>
+
+  <!-- Detalhe sutil de ambulância / APH -->
+  <circle cx="256" cy="430" r="12" fill="#93c5fd" opacity="0.8" />
+  <circle cx="216" cy="430" r="8" fill="#93c5fd" opacity="0.5" />
+  <circle cx="296" cy="430" r="8" fill="#93c5fd" opacity="0.5" />
+</svg>

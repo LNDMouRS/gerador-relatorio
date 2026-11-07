@@ -1,0 +1,6 @@
+{
+  "name": "Gerador de Prontuário APH",
+  "description": "Aplicativo de Registro de Atendimento Pré-Hospitalar (APH/SAMU/Resgate) com leitura de documentos via OCR, cálculo automático de Glasgow GCS-P e gerador de relatório para cópia rápida.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

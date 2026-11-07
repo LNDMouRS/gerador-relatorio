@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Prontuário</title>
+    <!-- Biblioteca Tesseract.js para OCR direto no navegador -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f4f6f9;
+            padding: 12px;
+            margin: 0;
+        }
+        .container {
+            max-width: 600px;
+            background: white;
+            padding: 18px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+            color: #1a202c;
+            margin-top: 0;
+            font-size: 22px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        .section-title {
+            background: #e2e8f0;
+            color: #2d3748;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            border-left: 5px solid #007bff;
+            border-radius: 4px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            font-size: 16px;
+            background-color: #fff;
+            color: #2d3748;
+            transition: border-color 0.2s, background-color 0.3s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .campo-preenchido-ocr {
+            background-color: #f0fff4 !important;
+            border-color: #38a169 !important;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .checkbox-group, .expandable-panel {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e0;
+            margin-bottom: 12px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 4px 0;
+        }
+        .checkbox-item:last-child {
+            margin-bottom: 0;
+        }
+        .checkbox-item input {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .checkbox-item label {
+            margin-bottom: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .refeicao-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 4px;
+        }
+        .refeicao-options input[type="radio"] {
+            display: none;
+        }
+        .refeicao-options label {
+            background: #edf2f7;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 1px solid #cbd5e0;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .refeicao-options input[type="radio"]:checked + label {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+        }
+        button:active {
+            background-color: #0056b3;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            padding: 10px;
+            font-size: 14px;
+            margin-top: 5px;
+            margin-bottom: 10px;
+        }
+        .btn-secondary:active {
+            background-color: #545b62;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+            margin-top: 2px;
+            margin-bottom: 10px;
+            width: auto;
+            display: inline-block;
+        }
+        .btn-danger:active {
+            background-color: #bd2130;
+        }
+        .btn-copy {
+            background-color: #28a745;
+            box-shadow: 0 2px 4px rgba(40,167,69,0.2);
+        }
+        .btn-copy:active {
+            background-color: #1e7e34;
+        }
+
+        /* ===== ESTILO DE CAPTURA DE FOTO E OCR ===== */
+        .doc-capture-box {
+            background: #f8fafc;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 14px;
+        }
+        .btn-camera {
+            display: inline-block;
+            width: 100%;
+            background-color: #2b6cb0;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            margin-bottom: 0;
+            box-shadow: 0 2px 4px rgba(43,108,176,0.2);
+        }
+        .btn-camera:active {
+            background-color: #2c5282;
+        }
+        .preview-container {
+            margin-top: 12px;
+        }
+        .preview-container img {
+            max-width: 100%;
+            max-height: 280px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e0;
+            display: block;
+            margin: 0 auto 8px auto;
+            object-fit: contain;
+        }
+        .preview-actions {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .ocr-status-box {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #ebf8ff;
+            border: 1px solid #bee3f8;
+            color: #2b6cb0;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .ocr-progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #cbd5e0;
+            border-radius: 4px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .ocr-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #3182ce;
+            transition: width 0.2s ease;
+        }
+        .ocr-raw-details {
+            margin-top: 8px;
+            text-align: left;
+            font-size: 12px;
+            color: #4a5568;
+        }
+        .ocr-raw-details summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: #2b6cb0;
+            padding: 4px 0;
+        }
+        .ocr-raw-text {
+            width: 100%;
+            font-size: 12px;
+            font-family: monospace;
+            padding: 8px;
+            margin-top: 4px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            background: #fff;
+            resize: vertical;
+        }
+
+        /* ===== ÁREA DO RELATÓRIO ===== */
+        .output-wrapper {
+            margin-top: 15px;
+            background-color: #ffffff;
+            border: 2px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 60px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            color: #1a202c;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 15px;
+            line-height: 1.6;
+            -webkit-user-select: text;
+            user-select: text;
+            transition: font-size 0.2s ease;
+        }
+        .output-placeholder {
+            color: #a0aec0;
+            font-style: italic;
+            font-family: Arial, sans-serif;
+        }
+
+        /* ===== BARRA DE CONTROLE DO RELATÓRIO ===== */
+        .output-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .output-toolbar .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+        }
+        .btn-font {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e2e8f0;
+            color: #2d3748;
+            box-shadow: none;
+            border: 1px solid #cbd5e0;
+            flex-shrink: 0;
+        }
+        .btn-font:active {
+            background-color: #cbd5e0;
+        }
+        .font-size-label {
+            font-size: 12px;
+            color: #718096;
+            font-weight: 600;
+            min-width: 36px;
+            text-align: center;
+        }
+
+        .toast {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 32, 44, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 999;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .hidden {
+            display: none !important;
+        }
+        .veiculo-bloco, .apoio-bloco {
+            border-bottom: 1px dashed #cbd5e0;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+        .veiculo-bloco:last-child, .apoio-bloco:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .numero-bloco {
+            font-size: 12px;
+            font-weight: bold;
+            color: #718096;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚑 Registro de Atendimento</h2>
+    
+    <!-- 1. CHAMADO -->
+    <div class="section-title">1. Chamado</div>
+    <div class="form-group">
+        <label>Despacho:</label>
+        <input type="text" id="despacho" placeholder="Ex: B01">
+    </div>
+    <div class="form-group">
+        <label>Endereço:</label>
+        <input type="text" id="endereco">
+    </div>
+
+    <!-- 2. IDENTIFICAÇÃO + FOTO DO DOCUMENTO + OCR -->
+    <div class="section-title">2. Identificação</div>
+    
+    <div class="doc-capture-box">
+        <label for="foto_doc" class="btn-camera">📷 Tirar Foto do Documento (Leitura Automática)</label>
+        <input type="file" id="foto_doc" accept="image/*" capture="environment" onchange="mostrarPreviewDoc(this)" class="hidden">
+        
+        <div id="preview_doc_container" class="preview-container hidden">
+            <img id="img_preview_doc" src="" alt="Foto do documento da vítima">
+            <div class="preview-actions">
+                <button type="button" class="btn-secondary" style="width: auto; padding: 6px 12px; margin: 0; background-color: #2b6cb0;" onclick="executarOCR()">🔍 Reler Dados (OCR)</button>
+                <button type="button" class="btn-secondary" style="width: auto; padding: 6px 12px; margin: 0;" onclick="baixarFotoDoc()">💾 Salvar Foto</button>
+                <button type="button" class="btn-danger" style="margin: 0;" onclick="removerFotoDoc()">🗑️ Remover</button>
+            </div>
+
+            <!-- Barra de Progresso e Status do OCR -->
+            <div id="ocr_status_box" class="ocr-status-box hidden">
+                <div id="ocr_status_text">Iniciando leitura do documento...</div>
+                <div class="ocr-progress-bar">
+                    <div id="ocr_progress_fill" class="ocr-progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Texto Bruto Extraído (para consulta rápida caso o documento esteja desgastado) -->
+            <details id="ocr_raw_details" class="ocr-raw-details hidden">
+                <summary>📄 Ver texto bruto lido na imagem</summary>
+                <textarea id="ocr_raw_text" class="ocr-raw-text" rows="4" readonly></textarea>
+            </details>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Paciente:</label>
+        <input type="text" id="paciente">
+    </div>
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Idade:</label>
+            <input type="text" id="idade">
+        </div>
+        <div class="form-group">
+            <label>DN:</label>
+            <input type="text" id="dn" placeholder="dd/mm/aaaa" maxlength="10" oninput="mascaraData(this)">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>CPF:</label>
+        <input type="text" id="cpf" placeholder="000.000.000-00" maxlength="14" oninput="mascaraCPF(this)">
+    </div>
+    <div class="form-group">
+        <label>Mãe:</label>
+        <input type="text" id="mae">
+    </div>
+
+    <!-- 3. PROCEDIMENTO REALIZADO -->
+    <div class="section-title">3. Procedimento Realizado</div>
+    <div class="checkbox-group">
+        <div class="checkbox-item">
+            <input type="checkbox" id="proc_nenhum" value="sem intervenção" onchange="checkNenhum()">
+            <label for="proc_nenhum">Sem intervenção</label>
+        </div>
+        <div class="checkbox-item">
+            <input type="checkbox" id="proc_padrao" value="abordagem, exame primário e secundário, avaliação e monitoramento dos sinais vitais e transporte" checked onchange="checkPadrao()">
+            <label for="proc_padrao">Padrão (Abordagem, Exames, Sinais e Transporte)</label>
+        </div>
+        <div class="checkbox-item">
+            <input type="checkbox" id="proc_imob" value="imobilização, contenção" onchange="checkPadrao()">
+            <label for="proc_imob">Imobilização / Contenção</label>
+        </div>
+        <div class="checkbox-item">
+            <input type="checkbox" id="proc_oxig" value="oxigênio terapia" onchange="checkPadrao()">
+            <label for="proc_oxig">Oxigênio Terapia</label>
+        </div>
+        <div class="checkbox-item">
+            <input type="checkbox" id="proc_inter" value="transporte interhospitalar" onchange="checkPadrao()">
+            <label for="proc_inter">Transporte Interhospitalar</label>
+        </div>
+        <div class="checkbox-item">
+            <input type="checkbox" id="proc_outro" value="outros" onchange="toggleOutrosProc()">
+            <label for="proc_outro">Outros...</label>
+        </div>
+    </div>
+    <div class="form-group hidden" id="div_outro_procedimento">
+        <label>Especifique o procedimento extra:</label>
+        <input type="text" id="outro_procedimento_texto" placeholder="Digite os procedimentos adicionais">
+    </div>
+
+    <!-- 4. SINAIS VITAIS & AVALIAÇÃO -->
+    <div class="section-title">4. Sinais Vitais & Avaliação</div>
+    <div class="grid-2">
+        <div class="form-group">
+            <label>PA:</label>
+            <input type="text" id="pa" placeholder="120/80 (ou 090/60)" oninput="mascaraPA(this)">
+        </div>
+        <div class="form-group">
+            <label>SAT (%):</label>
+            <input type="text" id="sat" placeholder="00">
+        </div>
+    </div>
+    <div class="grid-2">
+        <div class="form-group">
+            <label>FC (bpm):</label>
+            <input type="text" id="fc" placeholder="00">
+        </div>
+        <div class="form-group">
+            <label>FR (mrpm):</label>
+            <input type="text" id="fr" placeholder="00">
+        </div>
+    </div>
+    <!-- Pupilas -->
+    <div class="form-group">
+        <label>Pupilas:</label>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <select id="pupilas_tipo" style="margin-bottom: 0; flex: 1;">
+                <option value="">Selecione...</option>
+                <option value="Isocóricas">Isocóricas</option>
+                <option value="Mióticas">Mióticas</option>
+                <option value="Midriáticas">Midriáticas</option>
+                <option value="Anisocóricas">Anisocóricas</option>
+            </select>
+            <div class="checkbox-item" style="margin-bottom: 0; padding: 0;">
+                <input type="checkbox" id="pupilas_reacao" checked style="width: 20px; height: 20px; margin-right: 6px;" onchange="calcularGlasgow()">
+                <label for="pupilas_reacao" style="font-size: 14px; font-weight: normal; margin-bottom: 0;">Fotorreativas</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pele -->
+    <div class="form-group">
+        <label>Pele:</label>
+        <input type="text" id="pele" placeholder="Ex: corada, desidratada, fria, cianótica">
+    </div>
+
+    <!-- Escala de Glasgow Expandida -->
+    <div class="expandable-panel" style="margin-top: 10px; background-color: #f8fafc; border: 1px solid #cbd5e0;">
+        <label style="font-size: 14px; font-weight: bold; color: #2d3748; border-bottom: 1px solid #cbd5e0; padding-bottom: 5px; margin-bottom: 10px; display: block;">🧠 Escala de Glasgow (GCS-P)</label>
+        
+        <div class="form-group">
+            <label style="font-size: 12px;">Abertura Ocular:</label>
+            <select id="glasgow_ocular" onchange="calcularGlasgow()" style="padding: 8px; font-size: 14px;">
+                <option value="0">Selecione...</option>
+                <option value="4">Espontânea (4)</option>
+                <option value="3">Ao som/chamado (3)</option>
+                <option value="2">À pressão/estímulo doloroso (2)</option>
+                <option value="1">Ausente (1)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label style="font-size: 12px;">Resposta Verbal:</label>
+            <select id="glasgow_verbal" onchange="calcularGlasgow()" style="padding: 8px; font-size: 14px;">
+                <option value="0">Selecione...</option>
+                <option value="5">Orientada (5)</option>
+                <option value="4">Confusa (4)</option>
+                <option value="3">Palavras inapropriadas (3)</option>
+                <option value="2">Sons incompreensíveis (2)</option>
+                <option value="1">Ausente (1)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label style="font-size: 12px;">Resposta Motora:</label>
+            <select id="glasgow_motora" onchange="calcularGlasgow()" style="padding: 8px; font-size: 14px;">
+                <option value="0">Selecione...</option>
+                <option value="6">Obedece a comandos (6)</option>
+                <option value="5">Localiza a dor (5)</option>
+                <option value="4">Flexão normal (retirada) (4)</option>
+                <option value="3">Flexão anormal (decorticação) (3)</option>
+                <option value="2">Extensão anormal (descerebração) (2)</option>
+                <option value="1">Ausente (1)</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 12px;">Total Calculado:</label>
+            <input type="text" id="glasgow" placeholder="Aguardando seleção dos 3 parâmetros..." style="font-weight: bold; background-color: #edf2f7;">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Última Refeição:</label>
+        <div class="refeicao-options">
+            <input type="radio" id="ref_cafe" name="refeicao" value="café">
+            <label for="ref_cafe">Café</label>
+            
+            <input type="radio" id="ref_almoco" name="refeicao" value="almoço">
+            <label for="ref_almoco">Almoço</label>
+            
+            <input type="radio" id="ref_janta" name="refeicao" value="janta">
+            <label for="ref_janta">Janta</label>
+            
+            <input type="radio" id="ref_nsabe" name="refeicao" value="não sabe informar">
+            <label for="ref_nsabe">Não Sabe</label>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Alergia:</label>
+        <input type="text" id="alergia" placeholder="Ex: Nega ou informe as alergias">
+    </div>
+    <div class="form-group">
+        <label>Doenças:</label>
+        <input type="text" id="doencas" placeholder="Ex: HAS, Diabetes, Cardiopatias...">
+    </div>
+    <div class="form-group">
+        <label>Medicamentos:</label>
+        <input type="text" id="medicamentos" placeholder="Medicamentos de uso contínuo">
+    </div>
+
+    <!-- 5. CASO -->
+    <div class="section-title">5. Caso</div>
+    <div class="form-group">
+        <label>Situação:</label>
+        <textarea id="situacao" rows="2"></textarea>
+    </div>
+
+    <!-- 6. CENÁRIO / APOIO -->
+    <div class="section-title">6. Cenário / Apoio</div>
+    <div class="checkbox-group">
+        <div class="checkbox-item">
+            <input type="checkbox" id="check_pm" onchange="togglePainel('painel_pm', this)">
+            <label for="check_pm">🚨 Viatura(s) de Apoio</label>
+        </div>
+        <div id="painel_pm" class="expandable-panel hidden">
+            <div id="container_apoio">
+                <div class="apoio-bloco" id="bloco_apoio_1">
+                    <div class="numero-bloco">Apoio 1</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Comandante:</label>
+                            <input type="text" class="txt-apoio-cmd" placeholder="Ex: Sgt Silva">
+                        </div>
+                        <div class="form-group">
+                            <label>Viatura:</label>
+                            <input type="text" class="txt-apoio-viatura" placeholder="Ex: M-12345">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" onclick="addApoio()">➕ Mais 1 Apoio</button>
+        </div>
+
+        <div class="checkbox-item">
+            <input type="checkbox" id="check_acidente" onchange="togglePainel('painel_acidente', this)">
+            <label for="check_acidente">💥 Acidente de Trânsito</label>
+        </div>
+        <div id="painel_acidente" class="expandable-panel hidden">
+            <div id="container_veiculos">
+                <div class="veiculo-bloco" id="bloco_veiculo_1">
+                    <div class="numero-bloco">Veículo 1</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Veículo:</label>
+                            <input type="text" class="txt-veiculo" placeholder="Ex: Fiat Uno Preto">
+                        </div>
+                        <div class="form-group">
+                            <label>Placa:</label>
+                            <input type="text" class="txt-placa" placeholder="Ex: ABC-1234">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" onclick="addVeiculo()">➕ Mais 1 Veículo</button>
+        </div>
+    </div>
+
+    <!-- 7. REGULAÇÃO -->
+    <div class="section-title">7. Regulação</div>
+    <div class="form-group">
+        <label>Regulado para:</label>
+        <input type="text" id="regulado">
+    </div>
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Dr:</label>
+            <input type="text" id="dr">
+        </div>
+        <div class="form-group">
+            <label>Senha:</label>
+            <input type="text" id="senha">
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Vítima admitida aos cuidados do(a):</label>
+        <input type="text" id="cuidados">
+    </div>
+
+    <button onclick="gerarTexto()">Gerar Relatório</button>
+    
+    <div class="section-title" id="resultado_secao">Resultado</div>
+
+    <!-- Barra de ferramentas: copiar + controle de fonte -->
+    <div class="output-toolbar">
+        <button class="btn-copy" onclick="copiarTexto()" style="flex:1; min-width:0;">Copiar Texto</button>
+        <div class="font-controls">
+            <button class="btn-font" onclick="ajustarFonte(-1)" title="Diminuir fonte">A−</button>
+            <span class="font-size-label" id="font_size_label">15px</span>
+            <button class="btn-font" onclick="ajustarFonte(1)" title="Aumentar fonte">A+</button>
+        </div>
+    </div>
+
+    <!-- Área do relatório -->
+    <div class="output-wrapper" id="output">
+        <span class="output-placeholder">Clique em "Gerar Relatório" para exibir o texto aqui...</span>
+    </div>
+</div>
+
+<div class="toast" id="toast">Copiado com sucesso! ✔️</div>
+
+<script>
+// ==========================================
+// PROTEÇÃO CONTRA ATUALIZAÇÃO DA PÁGINA
+// ==========================================
+window.addEventListener('beforeunload', function(e) {
+    e.preventDefault();
+    e.returnValue = 'ATENÇÃO: Todos os dados preenchidos serão apagados se você atualizar a página! Tem certeza que deseja sair?';
+    return e.returnValue;
+});
+
+// ==========================================
+// CAPTURA, PREVIEW E OCR DO DOCUMENTO
+// ==========================================
+let fotoDocumentoBase64 = "";
+
+function mostrarPreviewDoc(input) {
+    if (input.files && input.files[0]) {
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            fotoDocumentoBase64 = e.target.result;
+            document.getElementById('img_preview_doc').src = fotoDocumentoBase64;
+            document.getElementById('preview_doc_container').classList.remove('hidden');
+            // Dispara a leitura automática assim que a foto é carregada
+            executarOCR();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removerFotoDoc() {
+    if (confirm("Deseja remover a foto do documento?")) {
+        fotoDocumentoBase64 = "";
+        document.getElementById('foto_doc').value = "";
+        document.getElementById('img_preview_doc').src = "";
+        document.getElementById('preview_doc_container').classList.add('hidden');
+        document.getElementById('ocr_status_box').classList.add('hidden');
+        document.getElementById('ocr_raw_details').classList.add('hidden');
+    }
+}
+
+function baixarFotoDoc() {
+    if (!fotoDocumentoBase64) return;
+    let nomePaciente = document.getElementById('paciente').value.trim() || "vitima";
+    let nomeArquivo = "doc_" + nomePaciente.replace(/\s+/g, '_').toLowerCase() + ".jpg";
+    
+    let link = document.createElement('a');
+    link.href = fotoDocumentoBase64;
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Pré-processamento em Canvas (redimensiona e aumenta contraste para melhorar precisão do OCR)
+function preProcessarImagem(base64Str) {
+    return new Promise((resolve) => {
+        let img = new Image();
+        img.onload = function() {
+            let canvas = document.createElement('canvas');
+            let maxDim = 1600;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height && width > maxDim) {
+                height *= maxDim / width;
+                width = maxDim;
+            } else if (height > maxDim) {
+                width *= maxDim / height;
+                height = maxDim;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Converte para tons de cinza com ganho de contraste
+            let imgData = ctx.getImageData(0, 0, width, height);
+            let data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                let cinza = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+                // Contraste leve para destacar letras escuras do fundo do RG/CNH
+                cinza = cinza < 128 ? Math.max(0, cinza - 20) : Math.min(255, cinza + 20);
+                data[i] = data[i + 1] = data[i + 2] = cinza;
+            }
+            ctx.putImageData(imgData, 0, 0);
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+        };
+        img.src = base64Str;
+    });
+}
+
+async function executarOCR() {
+    if (!fotoDocumentoBase64) return;
+
+    let statusBox = document.getElementById('ocr_status_box');
+    let statusText = document.getElementById('ocr_status_text');
+    let progressFill = document.getElementById('ocr_progress_fill');
+    let rawDetails = document.getElementById('ocr_raw_details');
+    let rawText = document.getElementById('ocr_raw_text');
+
+    statusBox.classList.remove('hidden');
+    statusText.textContent = "Preparando imagem para leitura...";
+    progressFill.style.width = "10%";
+
+    try {
+        let imgOtimizada = await preProcessarImagem(fotoDocumentoBase64);
+
+        const resultado = await Tesseract.recognize(
+            imgOtimizada,
+            'por',
+            {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        let pct = Math.round(m.progress * 100);
+                        progressFill.style.width = pct + "%";
+                        statusText.textContent = `Lendo documento... (${pct}%)`;
+                    }
+                }
+            }
+        );
+
+        let textoExtraido = resultado.data.text || "";
+        rawText.value = textoExtraido;
+        rawDetails.classList.remove('hidden');
+
+        let qtdExtraida = extrairDadosDoTexto(textoExtraido);
+
+        progressFill.style.width = "100%";
+        if (qtdExtraida > 0) {
+            statusText.textContent = `✅ Leitura concluída! ${qtdExtraida} campo(s) preenchido(s) automaticamente.`;
+        } else {
+            statusText.textContent = "⚠️ Leitura concluída, mas não foi possível identificar os padrões automaticamente. Confira o texto bruto abaixo.";
+        }
+    } catch (erro) {
+        console.error("Erro no OCR:", erro);
+        statusText.textContent = "❌ Não foi possível ler a imagem automaticamente. Verifique a conexão ou preencha manualmente.";
+    }
+}
+
+function destacarCampo(id) {
+    let el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('campo-preenchido-ocr');
+    setTimeout(() => {
+        el.classList.remove('campo-preenchido-ocr');
+    }, 3000);
+}
+
+function extrairDadosDoTexto(texto) {
+    let camposPreenchidos = 0;
+    let textoLimpo = texto.toUpperCase();
+    let linhas = textoLimpo.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 2);
+
+    // 1. EXTRAIR CPF (Formato 000.000.000-00, 000000000/00 ou 11 dígitos)
+    let regexCPF = /\b(\d{3})[\.\s]?(\d{3})[\.\s]?(\d{3})[-\/\.\s](\d{2})\b/;
+    let matchCPF = textoLimpo.match(regexCPF);
+    if (!matchCPF) {
+        // Tenta buscar 11 números seguidos próximos à palavra CPF
+        let matchCpfSemMascara = textoLimpo.match(/CPF[:\s\.\-]*(\d{11})\b/);
+        if (matchCpfSemMascara) {
+            let num = matchCpfSemMascara[1];
+            matchCPF = [num, num.slice(0,3), num.slice(3,6), num.slice(6,9), num.slice(9,11)];
+        }
+    }
+    if (matchCPF) {
+        let campoCpf = document.getElementById('cpf');
+        campoCpf.value = `${matchCPF[1]}.${matchCPF[2]}.${matchCPF[3]}-${matchCPF[4]}`;
+        mascaraCPF(campoCpf);
+        destacarCampo('cpf');
+        camposPreenchidos++;
+    }
+
+    // 2. EXTRAIR DATA DE NASCIMENTO (dd/mm/aaaa)
+    let regexData = /\b(0[1-9]|[12][0-9]|3[01])[\/\-\.](0[1-9]|1[012])[\/\-\.](19\d{2}|20\d{2})\b/g;
+    let datasEncontradas = [];
+    let m;
+    let anoAtual = new Date().getFullYear();
+
+    while ((m = regexData.exec(textoLimpo)) !== null) {
+        let dia = m[1];
+        let mes = m[2];
+        let ano = parseInt(m[3], 10);
+        if (ano >= 1900 && ano <= anoAtual) {
+            datasEncontradas.push({ formatada: `${dia}/${mes}/${ano}`, ano: ano });
+        }
+    }
+
+    if (datasEncontradas.length > 0) {
+        // Em documentos (RG/CNH), a data de nascimento é sempre a data com o menor ano (mais antiga que emissão/validade)
+        datasEncontradas.sort((a, b) => a.ano - b.ano);
+        let campoDn = document.getElementById('dn');
+        campoDn.value = datasEncontradas[0].formatada;
+        mascaraData(campoDn); // Já calcula e preenche a Idade automaticamente
+        destacarCampo('dn');
+        destacarCampo('idade');
+        camposPreenchidos++;
+    }
+
+    // 3. EXTRAIR NOME DO PACIENTE E MÃE
+    const palavrasIgnoradas = [
+        "REPUBLICA", "FEDERATIVA", "BRASIL", "GOVERno", "ESTADO", "SECRETARIA",
+        "CARTEIRA", "NACIONAL", "HABILITACAO", "IDENTIDADE", "REGISTRO", "GERAL",
+        "DEPARTAMENTO", "TRANSITO", "DETRAN", "MINISTERIO", "INFRAESTRUTURA",
+        "VALIDADE", "EMISSAO", "LOCAL", "DATA", "NASCIMENTO", "ASSINATURA",
+        "PORTADOR", "OBSERVACOES", "CATEGORIA", "PERMISSAO", "PROIBIDO",
+        "PLASTIFICAR", "NATURALIDADE", "DOC", "ORIGEM", "CPF", "FILIACAO"
+    ];
+
+    function ehLinhaDeNomeValida(str) {
+        let limpa = str.replace(/[^A-ZÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ\s]/g, '').trim();
+        if (limpa.length < 6) return false;
+        let partes = limpa.split(/\s+/);
+        if (partes.length < 2) return false;
+        for (let p of palavrasIgnoradas) {
+            if (limpa.includes(p)) return false;
+        }
+        return limpa;
+    }
+
+    let nomeEncontrado = "";
+    let maeEncontrada = "";
+
+    for (let i = 0; i < linhas.length; i++) {
+        let linha = linhas[i];
+
+        // Procura marcador de NOME
+        if (!nomeEncontrado && /\b(NOME|N0ME)\b/.test(linha) && !linha.includes("SOCIAL")) {
+            // Verifica se o nome está na mesma linha após "NOME"
+            let posNome = linha.replace(/.*?\b(NOME|N0ME)\b[:\.\-\s]*/, '').trim();
+            let validoMesmaLinha = ehLinhaDeNomeValida(posNome);
+            if (validoMesmaLinha) {
+                nomeEncontrado = validoMesmaLinha;
+            } else if (i + 1 < linhas.length) {
+                let validoProxLinha = ehLinhaDeNomeValida(linhas[i + 1]);
+                if (validoProxLinha) nomeEncontrado = validoProxLinha;
+            }
+        }
+
+        // Procura marcador de FILIAÇÃO / MÃE
+        if (!maeEncontrada && /\b(FILIACAO|FILIAÇÃO|MAE|MÃE)\b/.test(linha)) {
+            // Em RG e CNH, a filiação costuma ter Pai na 1ª linha e Mãe na 2ª linha (ou apenas Mãe)
+            let candidatosFiliacao = [];
+            for (let j = i + 1; j <= Math.min(i + 3, linhas.length - 1); j++) {
+                let cand = ehLinhaDeNomeValida(linhas[j]);
+                if (cand) candidatosFiliacao.push(cand);
+            }
+            if (candidatosFiliacao.length >= 2) {
+                maeEncontrada = candidatosFiliacao[1]; // Geralmente o 2º nome na filiação é a mãe
+            } else if (candidatosFiliacao.length === 1) {
+                maeEncontrada = candidatosFiliacao[0];
+            }
+        }
+    }
+
+    if (nomeEncontrado) {
+        document.getElementById('paciente').value = nomeEncontrado;
+        destacarCampo('paciente');
+        camposPreenchidos++;
+    }
+
+    if (maeEncontrada) {
+        document.getElementById('mae').value = maeEncontrada;
+        destacarCampo('mae');
+        camposPreenchidos++;
+    }
+
+    return camposPreenchidos;
+}
+
+// ==========================================
+// TAMANHO DA FONTE DO RELATÓRIO
+// ==========================================
+let tamanhoFonte = 15;
+const TAMANHO_MIN = 10;
+const TAMANHO_MAX = 28;
+
+function ajustarFonte(direcao) {
+    tamanhoFonte += direcao;
+    if (tamanhoFonte < TAMANHO_MIN) tamanhoFonte = TAMANHO_MIN;
+    if (tamanhoFonte > TAMANHO_MAX) tamanhoFonte = TAMANHO_MAX;
+
+    let output = document.getElementById('output');
+    output.style.fontSize = tamanhoFonte + 'px';
+    document.getElementById('font_size_label').textContent = tamanhoFonte + 'px';
+}
+
+// ==========================================
+// CONTADORES
+// ==========================================
+let contadorVeiculos = 1;
+let contadorApoio = 1;
+
+// ==========================================
+// TOGGLE DE PAINÉIS
+// ==========================================
+function togglePainel(idPainel, checkbox) {
+    let painel = document.getElementById(idPainel);
+    if (checkbox.checked) {
+        painel.classList.remove('hidden');
+    } else {
+        painel.classList.add('hidden');
+    }
+}
+
+// ==========================================
+// VIATURAS DE APOIO
+// ==========================================
+function addApoio() {
+    contadorApoio++;
+    let container = document.getElementById('container_apoio');
+    let idUnico = 'bloco_apoio_' + contadorApoio;
+    let novoBloco = document.createElement('div');
+    novoBloco.className = 'apoio-bloco';
+    novoBloco.id = idUnico;
+    novoBloco.innerHTML = `
+        <div class="numero-bloco">Apoio ${contadorApoio}</div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Comandante:</label>
+                <input type="text" class="txt-apoio-cmd" placeholder="Ex: Sgt Souza">
+            </div>
+            <div class="form-group">
+                <label>Viatura:</label>
+                <input type="text" class="txt-apoio-viatura" placeholder="Ex: M-67890">
+            </div>
+        </div>
+        <button type="button" class="btn-danger" onclick="removerApoio('${idUnico}')">🗑️ Remover Apoio</button>
+    `;
+    container.appendChild(novoBloco);
+}
+
+function removerApoio(idBloco) {
+    if (confirm("Tem certeza que deseja excluir esta viatura de apoio?")) {
+        let bloco = document.getElementById(idBloco);
+        if (bloco) bloco.remove();
+    }
+}
+
+// ==========================================
+// VEÍCULOS DE ACIDENTE
+// ==========================================
+function addVeiculo() {
+    contadorVeiculos++;
+    let container = document.getElementById('container_veiculos');
+    let idUnico = 'bloco_veiculo_' + contadorVeiculos;
+    let novoBloco = document.createElement('div');
+    novoBloco.className = 'veiculo-bloco';
+    novoBloco.id = idUnico;
+    novoBloco.innerHTML = `
+        <div class="numero-bloco">Veículo ${contadorVeiculos}</div>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>Veículo:</label>
+                <input type="text" class="txt-veiculo" placeholder="Ex: Moto Vermelha">
+            </div>
+            <div class="form-group">
+                <label>Placa:</label>
+                <input type="text" class="txt-placa" placeholder="Ex: XYZ-9876">
+            </div>
+        </div>
+        <button type="button" class="btn-danger" onclick="removerVeiculo('${idUnico}')">🗑️ Remover Veículo</button>
+    `;
+    container.appendChild(novoBloco);
+}
+
+function removerVeiculo(idBloco) {
+    if (confirm("Tem certeza que deseja excluir este veículo?")) {
+        let bloco = document.getElementById(idBloco);
+        if (bloco) bloco.remove();
+    }
+}
+
+// ==========================================
+// PROCEDIMENTOS
+// ==========================================
+function toggleOutrosProc() {
+    let divOutro = document.getElementById('div_outro_procedimento');
+    if (document.getElementById('proc_outro').checked) {
+        divOutro.classList.remove('hidden');
+        document.getElementById('proc_nenhum').checked = false;
+    } else {
+        divOutro.classList.add('hidden');
+    }
+}
+
+function checkNenhum() {
+    if (document.getElementById('proc_nenhum').checked) {
+        document.getElementById('proc_padrao').checked = false;
+        document.getElementById('proc_imob').checked = false;
+        document.getElementById('proc_oxig').checked = false;
+        document.getElementById('proc_inter').checked = false;
+        document.getElementById('proc_outro').checked = false;
+        document.getElementById('div_outro_procedimento').classList.add('hidden');
+    }
+}
+
+function checkPadrao() {
+    if (document.getElementById('proc_padrao').checked || 
+        document.getElementById('proc_imob').checked || 
+        document.getElementById('proc_oxig').checked || 
+        document.getElementById('proc_inter').checked) {
+        document.getElementById('proc_nenhum').checked = false;
+    }
+}
+
+// ==========================================
+// MÁSCARA PARA A PRESSÃO ARTERIAL (PA)
+// ==========================================
+function mascaraPA(input) {
+    let valor = input.value.replace(/\D/g, '');
+    valor = valor.substring(0, 6);
+    if (valor.length > 3) {
+        valor = valor.replace(/^(\d{3})(\d)/, '$1/$2');
+    }
+    input.value = valor;
+}
+
+// ==========================================
+// MÁSCARA PARA O CPF
+// ==========================================
+function mascaraCPF(input) {
+    let valor = input.value.replace(/\D/g, '');
+    valor = valor.substring(0, 11);
+    valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+    valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+    valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    input.value = valor;
+}
+
+// ==========================================
+// MÁSCARA PARA DATA DE NASCIMENTO (DN) E CÁLCULO DE IDADE
+// ==========================================
+function mascaraData(input) {
+    let valor = input.value.replace(/\D/g, '');
+    valor = valor.substring(0, 8);
+    if (valor.length > 4) {
+        valor = valor.replace(/^(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3');
+    } else if (valor.length > 2) {
+        valor = valor.replace(/^(\d{2})(\d{1,2})/, '$1/$2');
+    }
+    input.value = valor;
+
+    if (valor.length === 10) {
+        let partes = valor.split('/');
+        let dia = parseInt(partes[0], 10);
+        let mes = parseInt(partes[1], 10) - 1;
+        let ano = parseInt(partes[2], 10);
+
+        let dataNasc = new Date(ano, mes, dia);
+        let hoje = new Date();
+
+        let idade = hoje.getFullYear() - dataNasc.getFullYear();
+        let diferencaMes = hoje.getMonth() - dataNasc.getMonth();
+
+        if (diferencaMes < 0 || (diferencaMes === 0 && hoje.getDate() < dataNasc.getDate())) {
+            idade--;
+        }
+
+        if (!isNaN(idade) && idade >= 0 && idade <= 130) {
+            document.getElementById('idade').value = idade;
+        }
+    }
+}
+
+// ==========================================
+// CÁLCULO DA ESCALA DE GLASGOW (GCS-P)
+// ==========================================
+function calcularGlasgow() {
+    let ocular = parseInt(document.getElementById('glasgow_ocular').value) || 0;
+    let verbal = parseInt(document.getElementById('glasgow_verbal').value) || 0;
+    let motora = parseInt(document.getElementById('glasgow_motora').value) || 0;
+
+    if (ocular > 0 && verbal > 0 && motora > 0) {
+        let total = ocular + verbal + motora;
+        let descontoPupila = 0;
+
+        if (!document.getElementById('pupilas_reacao').checked) {
+            descontoPupila = 2;
+            total = total - descontoPupila;
+        }
+
+        if (total < 1) total = 1;
+
+        let textoFinal = total;
+        
+        if (descontoPupila > 0) {
+            textoFinal += " (-2 Pupilas não fotorreativas)";
+        }
+
+        document.getElementById('glasgow').value = textoFinal;
+    } else {
+        document.getElementById('glasgow').value = "";
+    }
+}
+
+// ==========================================
+// GERAR TEXTO DO RELATÓRIO (NOVA SEQUÊNCIA)
+// ==========================================
+function gerarTexto() {
+    let linhas = [];
+
+    function add(label, id) {
+        let val = document.getElementById(id).value.trim();
+        if (val !== "") {
+            linhas.push(label + ": " + val);
+        }
+    }
+
+    // 1. CHAMADO
+    add("Despacho", "despacho");
+    add("Endereço", "endereco");
+
+    // 2. IDENTIFICAÇÃO
+    let temIdentificacao = (
+        document.getElementById('paciente').value.trim() !== "" || 
+        document.getElementById('idade').value.trim() !== "" || 
+        document.getElementById('dn').value.trim() !== "" || 
+        document.getElementById('cpf').value.trim() !== "" || 
+        document.getElementById('mae').value.trim() !== "" ||
+        fotoDocumentoBase64 !== ""
+    );
+    if (temIdentificacao && linhas.length > 0) {
+        linhas.push(""); 
+    }
+    add("Paciente", "paciente");
+    add("Idade", "idade");
+    add("DN", "dn");
+    add("CPF", "cpf");
+    add("Mãe", "mae");
+    if (fotoDocumentoBase64 !== "") {
+        linhas.push("Documento: Foto capturada em anexo");
+    }
+
+    // 3. PROCEDIMENTO REALIZADO
+    let procs = [];
+    if (document.getElementById('proc_nenhum').checked) procs.push("sem intervenção");
+    if (document.getElementById('proc_padrao').checked) procs.push("abordagem, exame primário e secundário, avaliação e monitoramento dos sinais vitais e transporte");
+    if (document.getElementById('proc_imob').checked) procs.push("imobilização, contenção");
+    if (document.getElementById('proc_oxig').checked) procs.push("oxigênio terapia");
+    if (document.getElementById('proc_inter').checked) procs.push("transporte interhospitalar");
+    if (document.getElementById('proc_outro').checked) {
+        let textoOutro = document.getElementById('outro_procedimento_texto').value.trim();
+        if (textoOutro !== "") procs.push(textoOutro);
+    }
+    if (procs.length > 0) {
+        if (linhas.length > 0) linhas.push("");
+        linhas.push("Procedimento realizado: " + procs.join(", "));
+    }
+
+    // 4. SINAIS VITAIS & AVALIAÇÃO
+    let pa = document.getElementById('pa').value.trim();
+    let sat = document.getElementById('sat').value.trim();
+    let fc = document.getElementById('fc').value.trim();
+    let fr = document.getElementById('fr').value.trim();
+    let pupilaTipo = document.getElementById('pupilas_tipo').value;
+    let pele = document.getElementById('pele').value.trim();
+    let glasgow = document.getElementById('glasgow').value.trim();
+    let refeicaoMarcada = document.querySelector('input[name="refeicao"]:checked');
+    let alergia = document.getElementById('alergia').value.trim();
+    let doencas = document.getElementById('doencas').value.trim();
+    let medicamentos = document.getElementById('medicamentos').value.trim();
+    
+    if (pa || sat || fc || fr || pupilaTipo !== "" || pele || glasgow || refeicaoMarcada || alergia || doencas || medicamentos) {
+        if (linhas.length > 0) linhas.push("");
+    }
+
+    if (pa !== "") linhas.push("PA: " + pa);
+    if (sat !== "") linhas.push("SAT: " + sat + "% a.a");
+    if (fc !== "") linhas.push("FC: " + fc + " bpm");
+    if (fr !== "") linhas.push("FR: " + fr + " mrpm");
+    
+    if (pupilaTipo !== "") {
+        let pupilaReacao = document.getElementById('pupilas_reacao').checked ? "fotorreativas" : "não fotorreativas";
+        linhas.push("Pupilas: " + pupilaTipo + ", " + pupilaReacao);
+    }
+
+    add("Pele", "pele");
+    add("Glasgow", "glasgow");
+
+    if (refeicaoMarcada) {
+        linhas.push("Última refeição: " + refeicaoMarcada.value);
+    }
+    add("Alergia", "alergia");
+    add("Doenças", "doencas");
+    add("Medicamentos", "medicamentos");
+
+    // 5. CASO
+    let situacao = document.getElementById('situacao').value.trim();
+    if (situacao !== "") {
+        if (linhas.length > 0) linhas.push("");
+        linhas.push("Situação: " + situacao);
+    }
+
+    // 6. CENÁRIO / APOIO
+    let linhasCenario = [];
+    if (document.getElementById('check_pm').checked) {
+        let txtCmd = document.getElementsByClassName('txt-apoio-cmd');
+        let txtVtr = document.getElementsByClassName('txt-apoio-viatura');
+        for (let i = 0; i < txtCmd.length; i++) {
+            let cmd = txtCmd[i].value.trim();
+            let vtr = txtVtr[i].value.trim();
+            if (cmd || vtr) {
+                linhasCenario.push("Apoio " + (i + 1) + " -> Comandante: " + (cmd || "N/I") + " | Viatura: " + (vtr || "N/I"));
+            }
+        }
+    }
+
+    if (document.getElementById('check_acidente').checked) {
+        let txtVeiculos = document.getElementsByClassName('txt-veiculo');
+        let txtPlacas = document.getElementsByClassName('txt-placa');
+        let temVeiculo = false;
+        let blocoVeiculos = ["Acidente de Trânsito:"]; 
+        
+        for (let i = 0; i < txtVeiculos.length; i++) {
+            let veiculo = txtVeiculos[i].value.trim();
+            let placa = txtPlacas[i].value.trim();
+            if (veiculo || placa) {
+                blocoVeiculos.push("  - Veículo " + (i + 1) + ": " + (veiculo || "N/I") + " | Placa: " + (placa || "N/I"));
+                temVeiculo = true;
+            }
+        }
+        if (temVeiculo) linhasCenario.push(...blocoVeiculos);
+    }
+
+    if (linhasCenario.length > 0) {
+        if (linhas.length > 0) linhas.push("");
+        linhas.push(...linhasCenario);
+    }
+
+    // 7. REGULAÇÃO
+    let regulado = document.getElementById('regulado').value.trim();
+    let dr = document.getElementById('dr').value.trim();
+    let senha = document.getElementById('senha').value.trim();
+    let cuidados = document.getElementById('cuidados').value.trim();
+
+    if (regulado !== "" || dr !== "" || senha !== "" || cuidados !== "") {
+        if (linhas.length > 0) linhas.push("");
+    }
+    
+    if (regulado !== "") linhas.push("Regulado para: " + regulado);
+    if (dr !== "") linhas.push("Dr: " + dr);
+    if (senha !== "") linhas.push("Senha: " + senha);
+    if (cuidados !== "") linhas.push("Vítima admitida aos cuidados do(a) " + cuidados);
+
+    // Junta tudo separando por quebra de linha (\n)
+    let textoFinal = linhas.join("\n").trim();
+    let outputDiv = document.getElementById('output');
+    
+    if(textoFinal === "") {
+        outputDiv.innerHTML = '<span class="output-placeholder">Nenhum dado preenchido. Preencha os campos e clique em "Gerar Relatório".</span>';
+    } else {
+        outputDiv.textContent = textoFinal;
+    }
+
+    document.getElementById('resultado_secao').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ==========================================
+// COPIAR TEXTO — COMPATÍVEL COM MOBILE
+// ==========================================
+function copiarTexto() {
+    let outputDiv = document.getElementById("output");
+    let texto = outputDiv.textContent;
+
+    if (!texto || outputDiv.querySelector('.output-placeholder')) return;
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(texto).then(function() {
+            mostrarToast();
+        }).catch(function() {
+            fallbackCopiar(texto);
+        });
+    } else {
+        fallbackCopiar(texto);
+    }
+}
+
+function fallbackCopiar(texto) {
+    let tempInput = document.createElement('textarea');
+    tempInput.value = texto;
+    tempInput.style.position = 'fixed';
+    tempInput.style.left = '-9999px';
+    tempInput.style.top = '0';
+    tempInput.style.opacity = '0';
+    document.body.appendChild(tempInput);
+    tempInput.focus();
+    tempInput.select();
+
+    let sucesso = false;
+    try {
+        sucesso = document.execCommand('copy');
+    } catch (err) {
+        sucesso = false;
+    }
+    document.body.removeChild(tempInput);
+
+    if (sucesso) {
+        mostrarToast();
+    } else {
+        let range = document.createRange();
+        range.selectNodeContents(document.getElementById('output'));
+        let sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        alert('Não foi possível copiar automaticamente. O texto foi selecionado — segure e escolha "Copiar" no menu do celular.');
+    }
+}
+
+function mostrarToast() {
+    let toast = document.getElementById("toast");
+    toast.style.display = "block";
+    setTimeout(function() {
+        toast.style.display = "none";
+    }, 2500);
+}
+</script>
+
+</body>
+</html>
