@@ -46,7 +46,7 @@ export const DocumentCapture: React.FC<DocumentCaptureProps> = ({
   const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
   const [dicaMelhoria, setDicaMelhoria] = useState<string | null>(null);
   const [motorUtilizado, setMotorUtilizado] = useState<'gemini' | 'tesseract' | null>(null);
-  const [modoOCR, setModoOCR] = useState<ModoOCR>('gemini');
+  const [modoOCR, setModoOCR] = useState<ModoOCR>(import.meta.env.VITE_STATIC_HOST ? 'local' : 'gemini');
   const [mostrarDicas, setMostrarDicas] = useState(false);
   const [fotoOriginal, setFotoOriginal] = useState<string>('');
 

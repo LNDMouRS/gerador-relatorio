@@ -279,7 +279,8 @@ export async function executarLeituraDocumento(
   modoPreferido: ModoOCR = 'gemini',
   onProgress?: OCRProgressCallback
 ): Promise<ResultadoLeituraDocumento> {
-  if (modoPreferido === 'gemini') {
+  // GitHub Pages has no backend: read locally without a failing API request.
+  if (modoPreferido === 'gemini' && !import.meta.env.VITE_STATIC_HOST) {
     try {
       return await executarGeminiOCR(base64Str, onProgress);
     } catch (err: any) {
